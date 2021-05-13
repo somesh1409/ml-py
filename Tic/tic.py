@@ -1,12 +1,14 @@
 import numpy as np
 import pickle
 
+from numpy.core.numeric import cross
+
 BOARD_ROWS = 3
 BOARD_COLS = 3
 
 
 class State:
-    def __init__(self, p1, p2):
+    def __init__(self, p1, p2, printBoard=False):
         self.board = np.zeros((BOARD_ROWS, BOARD_COLS))
         self.p1 = p1
         self.p2 = p2
@@ -14,6 +16,7 @@ class State:
         self.boardHash = None
         # init p1 plays first
         self.playerSymbol = 1
+        self.printBoard = printBoard
 
     # get unique hash of current board state
     def getHash(self):
@@ -75,13 +78,13 @@ class State:
         result = self.winner()
         # backpropagate reward
         if result == 1:
-            self.p1.feedReward(1)
+            self.p1.feedReward(3)
             self.p2.feedReward(0)
         elif result == -1:
             self.p1.feedReward(0)
-            self.p2.feedReward(1)
+            self.p2.feedReward(3)
         else:
-            self.p1.feedReward(0.1)
+            self.p1.feedReward(0.2)
             self.p2.feedReward(0.5)
 
     # board reset
@@ -92,10 +95,15 @@ class State:
         self.playerSymbol = 1
 
     def play(self, rounds=100):
+        crossWins = 0
+        zeroWins = 0
+        draw = 0
         for i in range(rounds):
             if i % 1000 == 0:
                 print("Rounds {}".format(i))
             while not self.isEnd:
+                if self.printBoard:
+                    self.showBoard()
                 # Player 1
                 positions = self.availablePositions()
                 p1_action = self.p1.chooseAction(positions, self.board, self.playerSymbol)
@@ -109,6 +117,15 @@ class State:
                 if win is not None:
                     # self.showBoard()
                     # ended with p1 either win or draw
+                    if self.printBoard:
+                        print("Game Result: ", win)
+                    if win == 1:
+                        crossWins +=1
+                        quit()
+                    elif win == -1:
+                        zeroWins += 1
+                    elif win == 0:
+                        draw += 1
                     self.giveReward()
                     self.p1.reset()
                     self.p2.reset()
@@ -122,16 +139,27 @@ class State:
                     self.updateState(p2_action)
                     board_hash = self.getHash()
                     self.p2.addState(board_hash)
-
                     win = self.winner()
+                    # print(win)
                     if win is not None:
                         # self.showBoard()
                         # ended with p2 either win or draw
+                        if self.printBoard:
+                            print("Game Result: ", win)
+                        if win == 1:
+                            crossWins +=1
+                        elif win == -1:
+                            zeroWins += 1
+                        elif win == 0:
+                            draw += 1
                         self.giveReward()
                         self.p1.reset()
                         self.p2.reset()
                         self.reset()
                         break
+        print('Cross Wins: ', crossWins)
+        print('Zero Wins: ', zeroWins)
+        print('Draw: ', draw)
 
     # play with human
     def play2(self):
@@ -186,13 +214,14 @@ class State:
 
 
 class Player:
-    def __init__(self, name, exp_rate=0.3):
+    def __init__(self, name, exp_rate=0.3, printStatesBool = False):
         self.name = name
         self.states = []  # record all positions taken
-        self.lr = 0.2
+        self.lr = 0.3
         self.exp_rate = exp_rate
-        self.decay_gamma = 0.9
+        self.decay_gamma = 1
         self.states_value = {}  # state -> value
+        self.printStatesBool = printStatesBool
 
     def getHash(self, board):
         boardHash = str(board.reshape(BOARD_COLS * BOARD_ROWS))
@@ -205,16 +234,27 @@ class Player:
             action = positions[idx]
         else:
             value_max = -999
+            self.board_states = np.zeros((BOARD_ROWS, BOARD_COLS))
             for p in positions:
                 next_board = current_board.copy()
                 next_board[p] = symbol
                 next_boardHash = self.getHash(next_board)
                 value = 0 if self.states_value.get(next_boardHash) is None else self.states_value.get(next_boardHash)
                 # print("value", value)
+                self.board_states[p] = value
                 if value >= value_max:
                     value_max = value
                     action = p
         # print("{} takes action {}".format(self.name, action))
+            if (self.printStatesBool):
+                print('Board State Values')
+                for i in range(0, BOARD_ROWS):
+                    print('-------------')
+                    out = '| '
+                    for j in range(0, BOARD_COLS):
+                        out += str(round(self.board_states[i, j],2)) + ' | '
+                    print(out)
+                print('-------------')
         return action
 
     # append a hash state
@@ -228,6 +268,8 @@ class Player:
                 self.states_value[st] = 0
             self.states_value[st] += self.lr * (self.decay_gamma * reward - self.states_value[st])
             reward = self.states_value[st]
+            # print(st, ': ', reward)
+        # print('------')
 
     def reset(self):
         self.states = []
@@ -236,11 +278,15 @@ class Player:
         fw = open('policy_' + str(self.name), 'wb')
         pickle.dump(self.states_value, fw)
         fw.close()
+        print('Policy Saved')
+        # print(self.states_value)
 
     def loadPolicy(self, file):
         fr = open(file, 'rb')
         self.states_value = pickle.load(fr)
         fr.close()
+        print('Policy Loaded')
+        # print(self.states_value)
 
 
 class HumanPlayer:
@@ -271,17 +317,22 @@ if __name__ == "__main__":
     # training
     p1 = Player("p1")
     p2 = Player("p2")
+    p1 = Player("p1", printStatesBool=False, exp_rate=0)
+    p2 = Player("p2", printStatesBool=False, exp_rate=0)
+    # load previous policy
+    p1.loadPolicy("policy_p1")
+    p2.loadPolicy("policy_p2")
 
-    st = State(p1, p2)
+    st = State(p1, p2, printBoard=False)
     print("training...")
-    st.play(50000)
+    # st.play(10000)
 
     # save policy
     p1.savePolicy()
     p2.savePolicy()
 
     # play with human
-    p1 = Player("computer", exp_rate=0)
+    p1 = Player("computer", exp_rate=0, printStatesBool=True)
     p1.loadPolicy("policy_p1")
 
     p2 = HumanPlayer("human")

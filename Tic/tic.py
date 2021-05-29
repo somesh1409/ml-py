@@ -1,4 +1,5 @@
 import numpy as np
+import arcade
 
 # sys.path.append(".")
 from player import Player
@@ -22,7 +23,7 @@ if __name__ == "__main__":
 
     st = State(p1, p2, printBoard=False)
     print("training...")
-    # st.play(10000)
+    st.play(10000)
 
     # save policy
     p1.savePolicy()
@@ -35,4 +36,6 @@ if __name__ == "__main__":
     p2 = HumanPlayer("human")
 
     st = State(p1, p2)
-    st.play2()
+    # st.play2()
+
+    # arcade.run()

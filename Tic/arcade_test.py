@@ -51,9 +51,9 @@ class TicTacToe(arcade.Window):
                     self.boardSprites.append(zero)
         
 # app = TicTacToe(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE, BOARD_ROWS, BOARD_COLS)
-# app.setup()
+# # app.setup()
 # board = numpy.zeros((BOARD_ROWS, BOARD_COLS))
 # board[1,1] = 1
 # app.printBoard(board)
-
 # arcade.run()
+# print("Here!")

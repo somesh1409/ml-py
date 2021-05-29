@@ -1,3 +1,4 @@
+from player import HumanPlayer
 import numpy as np
 import arcade
 from arcade_test import TicTacToe
@@ -15,9 +16,9 @@ class State:
         # init p1 plays first
         self.playerSymbol = 1
         self.printBoard = printBoard
-        self.app = TicTacToe(600, 600, "Tic Tac Toe", BOARD_ROWS, BOARD_COLS)
-        # self.app.setup()
-        arcade.run()
+        # if isinstance(p1, HumanPlayer) or isinstance(p2, HumanPlayer):
+            # self.app = TicTacToe(600, 600, "Tic Tac Toe", BOARD_ROWS, BOARD_COLS)
+            # self.app.setup()
 
     # get unique hash of current board state
     def getHash(self):
@@ -100,7 +101,7 @@ class State:
         zeroWins = 0
         draw = 0
         for i in range(rounds):
-            if i % 1000 == 0:
+            if i % 10000 == 0:
                 print("Rounds {}".format(i))
             while not self.isEnd:
                 if self.printBoard:
@@ -122,15 +123,16 @@ class State:
                         print("Game Result: ", win)
                     if win == 1:
                         crossWins +=1
-                        quit()
                     elif win == -1:
                         zeroWins += 1
                     elif win == 0:
                         draw += 1
+                    # print("Check!")
                     self.giveReward()
                     self.p1.reset()
                     self.p2.reset()
                     self.reset()
+                    
                     break
 
                 else:
@@ -153,10 +155,12 @@ class State:
                             zeroWins += 1
                         elif win == 0:
                             draw += 1
+                        # print("Check2")
                         self.giveReward()
                         self.p1.reset()
                         self.p2.reset()
                         self.reset()
+                        
                         break
         print('Cross Wins: ', crossWins)
         print('Zero Wins: ', zeroWins)
@@ -212,4 +216,5 @@ class State:
                 out += token + ' | '
             print(out)
         print('-------------')
-        self.app.printBoard(self.board)
+        # self.app = TicTacToe(600, 600, "Tic Tac Toe", BOARD_ROWS, BOARD_COLS)
+        # self.app.printBoard(self.board)

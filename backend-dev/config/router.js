@@ -1,7 +1,7 @@
 const express = require('express')
 
 const router = express.Router();
-const {UserController} = require('../controller/user-controller')
+const user_controller = require('../controller/user-controller')
 
 const {connection} = require('./database');
 
@@ -11,7 +11,12 @@ router.get('/', (req, res) => {
     res.send('Hello World!')
 });
 
-router.use('/user', UserController)
+// User Routes
+
+router.get('/user/all', user_controller.users_all_get);
+router.get('/user/:i', user_controller.users_id_get);
+router.post('/user/create', user_controller.users_create_post);
+router.post('/user/edit/:i', user_controller.users_update_post);
 
 // Testing Routes
 
